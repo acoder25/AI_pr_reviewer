@@ -1,0 +1,12 @@
+{
+  "name": "ai-pr-reviewer",
+  "version": "1.0.0",
+  "description": "AI-powered pull request reviewer",
+  "main": "run-review.js",
+  "scripts": {
+    "start": "node run-review.js"
+  },
+  "dependencies": {
+    "diff": "^9.0.0"
+  }
+}

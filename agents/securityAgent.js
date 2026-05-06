@@ -1,35 +1,90 @@
+const { model } = require("../llm/model");
+
+function safeJsonParse(text) {
+  try {
+    const cleaned = text
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    return JSON.parse(cleaned);
+  } catch (error) {
+    return { issues: [] };
+  }
+}
+
 async function review(context) {
-  const issues = [];
-  context.changes.forEach(({ file, line, content }) => {
-    if (/req\.(body|query)/.test(content) &&
-        /\+/.test(content) &&
-        /(find|findOne|update|delete)/.test(content)) {
-      issues.push({
-        severity: 'high',
-        message: 'Potential unsanitized user input in database query',
-        file,
-        line,
-      });
+  const changedCode = context.changes
+    .map(
+      (c) =>
+        `File: ${c.file}\nLine: ${c.line}\nType: ${c.type}\nCode: ${c.content}`
+    )
+    .join("\n\n");
+
+  if (!changedCode.trim()) return [];
+
+  const response = await model.invoke([
+    {
+      role: "system",
+      content: `
+You are a senior application security reviewer for MERN stack pull requests.
+
+Review only the changed code.
+
+Detect:
+- Missing validation for req.body, req.query, req.params
+- Direct request data used in MongoDB/Mongoose queries
+- NoSQL injection risks
+- Hardcoded secrets
+- Missing authorization checks before update/delete
+- JWT misuse
+- Sensitive data leakage
+- Dangerous eval or Function usage
+
+Important detection rule:
+If req.body, req.query, or req.params is used directly inside a database query such as findOne, find, update, delete, findByIdAndDelete, or findByIdAndUpdate, and the changed code does not show validation or type checking, report it.
+
+Severity rules:
+- high: hardcoded secrets, auth bypass, missing authorization on delete/update
+- medium: missing validation, unsafe request data in DB queries
+- low: minor security hardening
+
+Return ONLY valid JSON.
+No markdown.
+No explanation outside JSON.
+
+JSON format:
+{
+  "issues": [
+    {
+      "severity": "high | medium | low",
+      "category": "security",
+      "file": "file path",
+      "line": 12,
+      "message": "short issue description",
+      "suggestion": "how to fix"
     }
-    if (/['"]{1}[A-Za-z0-9_]{32,}['"]{1}/.test(content)) {
-      issues.push({
-        severity: 'high',
-        message: 'Hard-coded credential or secret detected',
-        file,
-        line,
-      });
-    }
-    if (/router\.(post|put|patch)/.test(content) &&
-        !/validate|checkSchema/.test(content)) {
-      issues.push({
-        severity: 'medium',
-        message: 'Route handler may lack input validation',
-        file,
-        line,
-      });
-    }
-  });
-  return issues;
+  ]
+}
+
+If no issue exists:
+{
+  "issues": []
+}
+`,
+    },
+    {
+      role: "user",
+      content: changedCode,
+    },
+  ]);
+
+  const parsed = safeJsonParse(response.content);
+
+  return parsed.issues.map((issue) => ({
+    ...issue,
+    source: "gemini-security-agent",
+  }));
 }
 
 module.exports = { review };

@@ -1,21 +1,73 @@
+const { model } = require("../llm/model");
+
+function safeJsonParse(text) {
+  try {
+    const cleaned = text
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    return JSON.parse(cleaned);
+  } catch (error) {
+    return { tests: [] };
+  }
+}
+
 async function generate(context) {
-  const tests = [];
-  const files = Array.from(new Set(context.changes.map((c) => c.file)));
-  files.forEach((file) => {
-    tests.push({
-      type: 'positive',
-      description: `should correctly handle valid input in ${file}`,
-    });
-    tests.push({
-      type: 'negative',
-      description: `should gracefully handle invalid or missing parameters in ${file}`,
-    });
-    tests.push({
-      type: 'edge',
-      description: `should handle edge cases (empty strings, null values) in ${file}`,
-    });
-  });
-  return tests;
+  const changedCode = context.changes
+    .map(
+      (c) =>
+        `File: ${c.file}\nLine: ${c.line}\nType: ${c.type}\nCode: ${c.content}`
+    )
+    .join("\n\n");
+
+  if (!changedCode.trim()) return [];
+
+  const response = await model.invoke([
+    {
+      role: "system",
+      content: `
+You are a senior QA engineer reviewing a MERN stack pull request.
+
+Generate useful tests based only on changed code.
+
+Rules:
+- If changed code exists, always generate at least 2 useful tests.
+- Do not generate generic tests.
+- Every test must mention the exact route, function, component, or file being tested.
+- Prefer Jest, Supertest, React Testing Library, or Cypress depending on the file.
+- Include positive, negative, edge, security, or performance tests when relevant.
+
+Return ONLY valid JSON.
+No markdown.
+No explanation outside JSON.
+
+JSON format:
+{
+  "tests": [
+    {
+      "type": "positive | negative | edge | security | performance",
+      "file": "file path",
+      "testName": "test name",
+      "description": "what this test verifies",
+      "framework": "Jest | Supertest | React Testing Library | Cypress"
+    }
+  ]
+}
+`,
+    },
+    {
+      role: "user",
+      content: changedCode,
+    },
+  ]);
+
+  const parsed = safeJsonParse(response.content);
+
+  return parsed.tests.map((test) => ({
+    ...test,
+    source: "gemini-test-agent",
+  }));
 }
 
 module.exports = { generate };

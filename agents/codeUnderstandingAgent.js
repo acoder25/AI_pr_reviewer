@@ -1,37 +1,106 @@
-function analyseDiff(diffArray) {
+function analyseDiff(patchContent) {
   const changes = [];
-  diffArray.forEach((patch) => {
-    // Safely choose the filename. For added/modified files, newFileName is used;
-    // for deleted files, oldFileName; otherwise fallback to empty string.
-    let filePathRaw = '';
-    if (patch.newFileName && patch.newFileName !== '/dev/null') {
-      filePathRaw = patch.newFileName;
-    } else if (patch.oldFileName && patch.oldFileName !== '/dev/null') {
-      filePathRaw = patch.oldFileName;
+
+  const lines = patchContent.split(/\r?\n/);
+
+  let currentFile = "unknown";
+  let oldLine = 0;
+  let newLine = 0;
+  let insideHunk = false;
+
+  for (const line of lines) {
+    // Example:
+    // diff --git a/server/routes/user.js b/server/routes/user.js
+    if (line.startsWith("diff --git")) {
+      const parts = line.split(" ");
+      const newFile = parts[3]; // b/path/to/file.js
+
+      if (newFile) {
+        currentFile = newFile.replace(/^b\//, "");
+      }
+
+      insideHunk = false;
+      continue;
     }
 
-    // Only call .replace() on a defined string; otherwise leave filePath blank
-    const filePath =filePathRaw ? filePathRaw.replace(/^([ab]\/)/, '') : 'unknown';
-    // … hunk parsing logic remains the same …
-    patch.hunks.forEach((hunk) => {
-      let newLine = hunk.newStart;
-      let oldLine = hunk.oldStart;
-      hunk.lines.forEach((line) => {
-        const sign = line[0];
-        const content = line.slice(1).trimEnd();
-        if (sign === '+') {
-          changes.push({ file: filePath, line: newLine, type: 'Added', content });
-          newLine++;
-        } else if (sign === '-') {
-          changes.push({ file: filePath, line: oldLine, type: 'Deleted', content });
-          oldLine++;
-        } else {
-          newLine++;
-          oldLine++;
-        }
+    // Example:
+    // +++ b/server/routes/user.js
+    if (line.startsWith("+++ ")) {
+      const file = line.replace("+++ ", "").trim();
+
+      if (file !== "/dev/null") {
+        currentFile = file.replace(/^b\//, "");
+      }
+
+      continue;
+    }
+    function shouldIgnoreFile(file) {
+      return (
+        file.includes("package-lock.json") ||
+        file.includes("package.json") ||
+        file.includes(".env") ||
+        file.includes("node_modules") ||
+        file.includes("dist/") ||
+        file.includes("build/")
+      );
+    }
+
+    // Example:
+    // @@ -10,6 +10,12 @@
+    if (line.startsWith("@@")) {
+      const match = line.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+
+      if (match) {
+        oldLine = Number(match[1]);
+        newLine = Number(match[2]);
+        insideHunk = true;
+      }
+
+      continue;
+    }
+
+    if (!insideHunk) {
+      continue;
+    }
+
+    if (line.startsWith("\\ No newline")) {
+      continue;
+    }
+    if (shouldIgnoreFile(currentFile)) continue;
+    // Added line
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      changes.push({
+        file: currentFile,
+        line: newLine,
+        type: "Added",
+        content: line.slice(1).trimEnd(),
       });
-    });
-  });
+
+      newLine++;
+      continue;
+    }
+
+    // Deleted line
+    if (line.startsWith("-") && !line.startsWith("---")) {
+      changes.push({
+        file: currentFile,
+        line: oldLine,
+        type: "Deleted",
+        content: line.slice(1).trimEnd(),
+      });
+
+      oldLine++;
+      continue;
+    }
+
+    // Context line
+    if (line.startsWith(" ")) {
+      oldLine++;
+      newLine++;
+      continue;
+    }
+  }
+
   return { changes };
 }
 

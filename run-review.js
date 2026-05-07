@@ -1,9 +1,11 @@
 const fs = require("fs");
 
 const codeAgent = require("./agents/codeUnderstandingAgent");
+const ruleBasedAgent = require("./agents/ruleBasedAgent");
 const securityAgent = require("./agents/securityAgent");
 const performanceAgent = require("./agents/performanceAgent");
 const testAgent = require("./agents/testAgent");
+const criticAgent = require("./agents/criticAgent");
 const summaryAgent = require("./agents/summaryAgent");
 
 function readPatchFile(patchPath) {
@@ -32,13 +34,22 @@ async function main() {
   console.error("Total changed lines:", context.changes.length);
   console.error("First 10 changes:", context.changes.slice(0, 10));
 
+  const ruleIssues = ruleBasedAgent.review(context);
   const securityIssues = await securityAgent.review(context);
   const performanceIssues = await performanceAgent.review(context);
   const tests = await testAgent.generate(context);
 
+  const preliminaryIssues = [
+    ...ruleIssues,
+    ...securityIssues,
+    ...performanceIssues,
+  ];
+
+  const criticReview = await criticAgent.review(context, preliminaryIssues);
+
   const report = summaryAgent.aggregate(
-    securityIssues,
-    performanceIssues,
+    preliminaryIssues,
+    criticReview,
     tests
   );
 

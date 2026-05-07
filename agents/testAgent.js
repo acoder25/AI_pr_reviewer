@@ -38,6 +38,9 @@ Rules:
 - Prefer Jest, Supertest, React Testing Library, or Cypress depending on the file.
 - Include positive, negative, edge, security, or performance tests when relevant.
 
+Do not suggest tests that depend on insecure implementation details.
+For hardcoded secrets, suggest tests that verify secrets are loaded from environment variables and that the app fails safely when the env variable is missing.
+
 Return ONLY valid JSON.
 No markdown.
 No explanation outside JSON.

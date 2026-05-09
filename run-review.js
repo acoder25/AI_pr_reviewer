@@ -1,16 +1,8 @@
 const fs = require("fs");
-
-const codeAgent = require("./agents/codeUnderstandingAgent");
-const ruleBasedAgent = require("./agents/ruleBasedAgent");
-const securityAgent = require("./agents/securityAgent");
-const performanceAgent = require("./agents/performanceAgent");
-const testAgent = require("./agents/testAgent");
-const criticAgent = require("./agents/criticAgent");
-const summaryAgent = require("./agents/summaryAgent");
+const { buildReviewGraph } = require("./graph/reviewGraph");
 
 function readPatchFile(patchPath) {
   const buffer = fs.readFileSync(patchPath);
-
   const hasNullBytes = buffer.includes(0);
 
   if (hasNullBytes) {
@@ -24,39 +16,36 @@ async function main() {
   const patchPath = process.argv[2];
 
   if (!patchPath) {
-    console.error("Usage: node run-review.js <patch-file>");
+    console.error("Usage: node run-review.js <patch-file> --repo <repo-path>");
     process.exit(1);
   }
 
+  const repoIndex = process.argv.indexOf("--repo");
+  const repoRoot =
+    repoIndex !== -1 && process.argv[repoIndex + 1]
+      ? process.argv[repoIndex + 1]
+      : null;
+
+  const skipTests = process.argv.includes("--skip-tests");
+  const skipCritic = process.argv.includes("--skip-critic");
+  const rulesOnly = process.argv.includes("--rules-only");
+
   const patchContent = readPatchFile(patchPath);
-  const context = codeAgent.analyseDiff(patchContent);
 
-  console.error("Total changed lines:", context.changes.length);
-  console.error("First 10 changes:", context.changes.slice(0, 10));
+  const graph = buildReviewGraph();
 
-  const ruleIssues = ruleBasedAgent.review(context);
-  const securityIssues = await securityAgent.review(context);
-  const performanceIssues = await performanceAgent.review(context);
-  const tests = await testAgent.generate(context);
+  const result = await graph.invoke({
+    patchContent,
+    repoRoot,
+    skipTests,
+    skipCritic,
+    rulesOnly,
+  });
 
-  const preliminaryIssues = [
-    ...ruleIssues,
-    ...securityIssues,
-    ...performanceIssues,
-  ];
-
-  const criticReview = await criticAgent.review(context, preliminaryIssues);
-
-  const report = summaryAgent.aggregate(
-    preliminaryIssues,
-    criticReview,
-    tests
-  );
-
-  console.log(JSON.stringify(report, null, 2));
+  console.log(JSON.stringify(result.report, null, 2));
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

@@ -1,67 +1,36 @@
-// agents/summaryAgent.js
-function enforceSeverityPolicy(issue) {
-  const text = `${issue.message} ${issue.suggestion || ""}`.toLowerCase();
-
-  if (
-    issue.ruleId === "hardcoded_secret" ||
-    /hardcoded|secret|token|api key|password|private key|jwt secret/.test(text)
-  ) {
-    return { ...issue, severity: "high" };
-  }
-
-  if (
-    issue.ruleId === "missing_pagination" ||
-    /missing pagination|unbounded mongo|unbounded query|fetching entire collection/.test(text)
-  ) {
-    return { ...issue, severity: issue.severity === "high" ? "high" : "medium" };
-  }
-
-  if (
-    /n\+1/.test(text) &&
-    !/loop|inside a loop|per item|for each|for \(/.test(text)
-  ) {
-    return {
-      ...issue,
-      message: issue.message.replace(/N\+1 query/i, "Unbounded query"),
-      severity: "medium",
-    };
-  }
-
-  return issue;
+function severityRank(severity) {
+  const ranking = { high: 1, medium: 2, low: 3 };
+  return ranking[severity] || 4;
 }
+
 function classifyIssue(issue) {
   const text = `${issue.message} ${issue.suggestion || ""}`.toLowerCase();
 
-  if (text.includes("hardcoded") || text.includes("secret")) {
+  if (/hardcoded|secret|jwt|api key|private key|password/.test(text)) {
     return "hardcoded_secret";
   }
 
-  if (
-    text.includes("req.body") ||
-    text.includes("request data") ||
-    text.includes("nosql") ||
-    text.includes("validation")
-  ) {
-    return "unsafe_input";
+  if (/pagination|unbounded|full collection|limit|skip/.test(text)) {
+    return "missing_pagination";
   }
 
-  if (text.includes("authorization") || text.includes("auth")) {
-    return "authorization";
-  }
-
-  if (text.includes("password") || text.includes("sensitive")) {
-    return "sensitive_data";
-  }
-
-  if (text.includes("pagination") || text.includes("unbounded")) {
-    return "pagination";
-  }
-
-  if (text.includes("loop") || text.includes("n+1")) {
+  if (/n\+1|inside a loop|per item|findbyid/.test(text)) {
     return "n_plus_one";
   }
 
-  return text.slice(0, 40);
+  if (/authorization|auth/.test(text)) {
+    return "authorization";
+  }
+
+  if (/validation|req\.body|req\.query|req\.params|nosql/.test(text)) {
+    return "unsafe_input";
+  }
+
+  if (/sensitive|leak|token|password/.test(text)) {
+    return "sensitive_data";
+  }
+
+  return text.slice(0, 50);
 }
 
 function mergeDuplicates(issues) {
@@ -72,7 +41,7 @@ function mergeDuplicates(issues) {
       issue.file,
       issue.line,
       issue.category,
-      classifyIssue(issue),
+      issue.ruleId || classifyIssue(issue),
     ].join("|");
 
     if (!map.has(key)) {
@@ -87,18 +56,16 @@ function mergeDuplicates(issues) {
         new Set([...existing.sources, issue.source])
       );
 
-      existing.message =
-        existing.message.length >= issue.message.length
-          ? existing.message
-          : issue.message;
-
-      existing.suggestion =
-        existing.suggestion.length >= issue.suggestion.length
-          ? existing.suggestion
-          : issue.suggestion;
-
       if (severityRank(issue.severity) < severityRank(existing.severity)) {
         existing.severity = issue.severity;
+      }
+
+      if ((issue.message || "").length > (existing.message || "").length) {
+        existing.message = issue.message;
+      }
+
+      if ((issue.suggestion || "").length > (existing.suggestion || "").length) {
+        existing.suggestion = issue.suggestion;
       }
     }
   }
@@ -106,34 +73,87 @@ function mergeDuplicates(issues) {
   return Array.from(map.values());
 }
 
-function severityRank(severity) {
-  const ranking = { high: 1, medium: 2, low: 3 };
-  return ranking[severity] || 4;
-}
+function applyPolicy(issue) {
+  const text = `${issue.message} ${issue.suggestion || ""}`.toLowerCase();
 
-function applyCriticReview(issues, criticReview) {
-  let filtered = issues.filter(
-    (_, index) => !criticReview.unsupportedIssueIndexes.includes(index)
-  );
-
-  for (const update of criticReview.severityUpdates || []) {
-    if (filtered[update.issueIndex]) {
-      filtered[update.issueIndex].severity = update.newSeverity;
-      filtered[update.issueIndex].criticSeverityReason = update.reason;
-    }
+  // Strong deterministic severity policies
+  if (
+    issue.ruleId === "hardcoded_secret" ||
+    /hardcoded|jwt secret|api key|private key|password|token/.test(text)
+  ) {
+    return { ...issue, severity: "high" };
   }
 
-  filtered.push(...(criticReview.missingIssues || []));
+  if (
+    issue.ruleId === "missing_pagination" ||
+    /missing pagination|unbounded mongodb|unbounded query|fetches all documents/.test(
+      text
+    )
+  ) {
+    return { ...issue, severity: "medium" };
+  }
 
-  return filtered;
+  if (
+    issue.ruleId === "n_plus_one_query" ||
+    /n\+1|database call inside loop|findbyid.*loop/.test(text)
+  ) {
+    return { ...issue, severity: "high" };
+  }
+
+  // Public read-only GET routes should not automatically be high auth issues
+  if (
+    /missing authentication|missing authorization/.test(text) &&
+    /get|list|feed|all posts|retrieves all posts/.test(text)
+  ) {
+    return { ...issue, severity: "medium" };
+  }
+
+  return issue;
+}
+
+function attachCriticOpinion(issues, criticReview) {
+  const opinions = criticReview.issueOpinions || [];
+
+  return issues.map((issue, index) => {
+    const opinion = opinions.find((o) => o.issueIndex === index);
+
+    if (!opinion) {
+      return {
+        ...issue,
+        criticStatus: "not_checked",
+        needsReview: false,
+      };
+    }
+
+    return {
+      ...issue,
+      criticStatus: opinion.status,
+      criticSuggestedSeverity: opinion.suggestedSeverity,
+      criticReason: opinion.reason,
+      needsReview:
+        opinion.status === "questionable" || opinion.status === "unsupported",
+    };
+  });
 }
 
 function calculateConfidence(issue) {
-  const sourceCount = issue.sources ? issue.sources.length : 1;
+  const sources = issue.sources || [issue.source];
 
-  if (issue.criticAdded) return "medium";
-  if (sourceCount >= 2) return "high";
-  if (issue.source === "rule-based-agent") return "medium";
+  if (issue.criticStatus === "unsupported") return "low";
+  if (issue.criticStatus === "questionable") return "medium";
+
+  if (sources.includes("rule-based-agent") && sources.length >= 2) {
+    return "high";
+  }
+
+  if (sources.includes("rule-based-agent")) {
+    return "medium";
+  }
+
+  if (issue.criticStatus === "supported") {
+    return "high";
+  }
+
   return "medium";
 }
 
@@ -152,15 +172,16 @@ function calculateReviewScore(issues, tests) {
 }
 
 function aggregate(preliminaryIssues, criticReview, tests) {
-  const criticApplied = applyCriticReview(preliminaryIssues, criticReview);
-  const mergedIssues = mergeDuplicates(criticApplied);
+  const withCritic = attachCriticOpinion(preliminaryIssues, criticReview);
+  const merged = mergeDuplicates(withCritic);
 
-  const finalIssues = mergedIssues
-  .map(enforceSeverityPolicy)
-  .map((issue) => ({
-    ...issue,
-    confidence: calculateConfidence(issue),
-  }))
+  const finalIssues = merged
+    .map(applyPolicy)
+    .map((issue) => ({
+      ...issue,
+      confidence: calculateConfidence(issue),
+    }))
+    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
 
   return {
     summary: {
@@ -168,14 +189,12 @@ function aggregate(preliminaryIssues, criticReview, tests) {
       highIssues: finalIssues.filter((i) => i.severity === "high").length,
       mediumIssues: finalIssues.filter((i) => i.severity === "medium").length,
       lowIssues: finalIssues.filter((i) => i.severity === "low").length,
+      needsManualReview: finalIssues.filter((i) => i.needsReview).length,
       totalTestsSuggested: tests.length,
       reviewScore: calculateReviewScore(finalIssues, tests),
-      criticRemovedIssues: criticReview.unsupportedIssueIndexes.length,
-      criticAddedIssues: criticReview.missingIssues.length,
     },
     issues: finalIssues,
     tests,
   };
 }
-
 module.exports = { aggregate };

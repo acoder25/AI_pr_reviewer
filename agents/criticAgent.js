@@ -5,20 +5,19 @@ function safeJsonParse(text) {
     const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
     return JSON.parse(cleaned);
   } catch {
-    return {
-      unsupportedIssueIndexes: [],
-      severityUpdates: [],
-    };
+    return { issueOpinions: [] };
   }
 }
 
 async function review(context, issues) {
-  const changedCode = context.changes
-    .map(
-      (c) =>
-        `File: ${c.file}\nLine: ${c.line}\nType: ${c.type}\nCode: ${c.content}`
-    )
-    .join("\n\n");
+  const changedCode =
+    context.reviewText ||
+    context.changes
+      .map(
+        (c) =>
+          `File: ${c.file}\nLine: ${c.line}\nType: ${c.type}\nCode: ${c.content}`
+      )
+      .join("\n\n");
 
   const issueList = issues
     .map(
@@ -35,70 +34,43 @@ Suggestion: ${i.suggestion}`
     )
     .join("\n\n");
 
-  if (!changedCode.trim()) {
-    return {
-      unsupportedIssueIndexes: [],
-      severityUpdates: [],
-      missingIssues: [],
-    };
+  if (!changedCode.trim() || issues.length === 0) {
+    return { issueOpinions: [] };
   }
 
   const response = await criticModel.invoke([
     {
       role: "system",
       content: `
-You are a critic/validator agent for an AI pull request reviewer.
-
-You will receive:
-1. Changed code
-2. Issues found by rule-based and Gemini agents
-
-Your role:
-- Validate existing findings.
-- Remove unsupported findings.
-- Correct clearly wrong severity.
-- Do NOT add new issues.
+You are an advisory critic for an AI pull request reviewer.
 
 Important:
-- Do not remove rule-based findings unless they are clearly wrong.
-- Do not add style-only comments.
-- Do not invent issues.
-- Do not rename issues incorrectly.
+- Do NOT remove issues.
+- Do NOT rewrite the final review.
+- Only judge whether each issue is supported by the changed code.
+- Mark each issue as: supported, questionable, or unsupported.
+- Suggest severity only if it is clearly wrong.
+- Do not add new issues.
 
-Performance definitions:
-- Missing pagination: a list endpoint fetches many/all documents without limit, skip, cursor, or pagination.
+Definitions:
+- Missing pagination: Model.find() or Model.find({}) in a list endpoint without limit/skip/page/cursor.
 - N+1 query: database query inside a loop or repeated per item.
-- Do not call simple find() an N+1 issue unless a loop exists.
+- Hardcoded secret/JWT/API key/password/private key is high severity.
+- Missing authorization is high mainly for delete/update/private data routes.
+- Missing validation in DB query is medium by default.
 
-Severity rules:
-- Hardcoded secrets, JWT secrets, API keys, tokens, passwords, private keys: high.
-- Missing authorization on delete/update/private data routes: high.
-- Missing pagination/unbounded list query: medium by default.
-- Missing input validation in DB query: medium by default.
-- Sensitive data leakage: high only if password/token/private fields are clearly returned.
-
-Do not remove a missing-pagination issue if the changed code contains Model.find() or Model.find({}) without limit, skip, page, or cursor.
-
-A simple Model.find() without pagination is NOT N+1, but it IS an unbounded query / missing pagination issue.
-
-Return ONLY valid JSON. No markdown.
+Return ONLY valid JSON.
 
 JSON format:
 {
-  "unsupportedIssueIndexes": [0, 2],
-  "severityUpdates": [
+  "issueOpinions": [
     {
-      "issueIndex": 1,
-      "newSeverity": "medium",
-      "reason": "why severity changed"
+      "issueIndex": 0,
+      "status": "supported | questionable | unsupported",
+      "suggestedSeverity": "high | medium | low | same",
+      "reason": "short reason"
     }
   ]
-}
-
-If everything is fine:
-{
-  "unsupportedIssueIndexes": [],
-  "severityUpdates": []
 }
 `,
     },
@@ -109,7 +81,7 @@ Changed code:
 
 ${changedCode}
 
-Current issues:
+Issues to validate:
 
 ${issueList}
 `,
@@ -119,9 +91,7 @@ ${issueList}
   const parsed = safeJsonParse(response.content);
 
   return {
-    unsupportedIssueIndexes: parsed.unsupportedIssueIndexes || [],
-    severityUpdates: parsed.severityUpdates || [],
-    missingIssues: [],
+    issueOpinions: parsed.issueOpinions || [],
   };
 }
 

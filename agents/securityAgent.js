@@ -14,7 +14,9 @@ function safeJsonParse(text) {
 }
 
 async function review(context) {
-  const changedCode = context.changes
+  const changedCode =
+  context.reviewText ||
+  context.changes
     .map(
       (c) =>
         `File: ${c.file}\nLine: ${c.line}\nType: ${c.type}\nCode: ${c.content}`
@@ -52,6 +54,8 @@ Severity rules:
 - high: hardcoded secrets, auth bypass, missing authorization on delete/update
 - medium: missing validation, unsafe request data in DB queries
 - low: minor security hardening
+
+Do not report missing authentication for public read-only GET routes unless the route clearly exposes private/internal/sensitive data.
 
 Return ONLY valid JSON.
 No markdown.

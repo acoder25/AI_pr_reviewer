@@ -14,7 +14,9 @@ function safeJsonParse(text) {
 }
 
 async function review(context) {
-  const changedCode = context.changes
+  const changedCode =
+  context.reviewText ||
+  context.changes
     .map(
       (c) =>
         `File: ${c.file}\nLine: ${c.line}\nType: ${c.type}\nCode: ${c.content}`

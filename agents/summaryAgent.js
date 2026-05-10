@@ -29,6 +29,9 @@ function classifyIssue(issue) {
   if (/sensitive|leak|token|password/.test(text)) {
     return "sensitive_data";
   }
+  if (/dependency|package|version|unpinned/.test(text)) {
+    return "dependency";
+  }
 
   return text.slice(0, 50);
 }
@@ -106,6 +109,13 @@ function applyPolicy(issue) {
     /get|list|feed|all posts|retrieves all posts/.test(text)
   ) {
     return { ...issue, severity: "medium" };
+  }
+  if (issue.ruleId === "unpinned_dependency") {
+    return { ...issue, severity: "medium" };
+  }
+
+  if (issue.ruleId === "risky_dependency") {
+    return { ...issue, severity: "high" };
   }
 
   return issue;

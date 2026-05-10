@@ -30,6 +30,14 @@ async function main() {
   const skipCritic = process.argv.includes("--skip-critic");
   const rulesOnly = process.argv.includes("--rules-only");
 
+  const fullReview = process.argv.includes("--full");
+
+  const maxChangesIndex = process.argv.indexOf("--max-changes");
+  const maxChanges =
+    maxChangesIndex !== -1 && process.argv[maxChangesIndex + 1]
+      ? Number(process.argv[maxChangesIndex + 1])
+      : 250;
+
   const patchContent = readPatchFile(patchPath);
 
   const graph = buildReviewGraph();
@@ -40,6 +48,8 @@ async function main() {
     skipTests,
     skipCritic,
     rulesOnly,
+    fullReview,
+    maxChanges,
   });
 
   console.log(JSON.stringify(result.report, null, 2));

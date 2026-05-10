@@ -151,5 +151,46 @@ ${snippet}
     reviewText: snippets.join("\n\n"),
   };
 }
+function scoreChange(change) {
+  const text = `${change.file} ${change.content}`.toLowerCase();
+  let score = 0;
 
-module.exports = { analyseDiff, addFileContext };
+  if (/routes|controllers|models|middlewares|server/.test(text)) score += 4;
+  if (/req\.body|req\.query|req\.params|jwt|secret|token|password/.test(text))
+    score += 5;
+  if (/findone|findbyid|\.find\(|delete|update/.test(text)) score += 4;
+  if (/router\.|app\.|res\.json|res\.status/.test(text)) score += 3;
+  if (/fetch\(|axios|api\//.test(text)) score += 3;
+  if (/for\s*\(|for\s+.*of|foreach|map\(/.test(text)) score += 2;
+
+  return score;
+}
+
+function applyLargePrLimits(context, maxChanges = 250) {
+  const originalChangedLines = context.changes.length;
+
+  if (originalChangedLines <= maxChanges) {
+    return {
+      ...context,
+      originalChangedLines,
+      largePrMode: false,
+    };
+  }
+
+  const prioritizedChanges = [...context.changes]
+    .map((change) => ({
+      ...change,
+      priorityScore: scoreChange(change),
+    }))
+    .sort((a, b) => b.priorityScore - a.priorityScore)
+    .slice(0, maxChanges);
+
+  return {
+    ...context,
+    changes: prioritizedChanges,
+    originalChangedLines,
+    largePrMode: true,
+  };
+}
+
+module.exports = { analyseDiff, addFileContext, applyLargePrLimits };

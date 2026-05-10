@@ -9,6 +9,8 @@ const apiContractAgent = require("../agents/apiContractAgent");
 const testAgent = require("../agents/testAgent");
 const criticAgent = require("../agents/criticAgent");
 const summaryAgent = require("../agents/summaryAgent");
+const routerAgent = require("../agents/routerAgent");
+const dependencyAgent = require("../agents/dependencyAgent");
 
 const ReviewState = Annotation.Root({
   patchContent: Annotation(),
@@ -20,11 +22,14 @@ const ReviewState = Annotation.Root({
     default: () => ({ issueOpinions: [] }),
   }),
   report: Annotation(),
+  routePlan: Annotation(),
 
   skipTests: Annotation(),
   skipCritic: Annotation(),
   rulesOnly: Annotation(),
   startedAt: Annotation(),
+  fullReview: Annotation(),
+  maxChanges: Annotation(),
 
   issues: Annotation({
     reducer: (left, right) => [...(left || []), ...(right || [])],
@@ -58,21 +63,46 @@ async function safeTestCall(name, fn, context) {
 async function parseDiffNode(state) {
   let context = codeAgent.analyseDiff(state.patchContent);
 
-  context = codeAgent.addFileContext(
-    context,
-    state.repoRoot,
-    20
-  );
+  if (state.fullReview) {
+    context = {
+      ...context,
+      originalChangedLines: context.changes.length,
+      largePrMode: false,
+      reviewMode: "full",
+    };
+  } else {
+    context = codeAgent.applyLargePrLimits(
+      context,
+      state.maxChanges || 250
+    );
 
-  console.error("Total changed lines:", context.changes.length);
-  console.error("First 10 changes:", context.changes.slice(0, 10));
+    context.reviewMode = context.largePrMode ? "smart" : "full";
+  }
+
+  context = codeAgent.addFileContext(context, state.repoRoot, 20);
 
   return {
     context,
     startedAt: Date.now(),
   };
 }
+async function routerNode(state) {
+  const routePlan = routerAgent.route(state.context, {
+    skipTests: state.skipTests,
+    skipCritic: state.skipCritic,
+  });
 
+  console.error("Router plan:", routePlan);
+
+  return { routePlan };
+}
+async function dependencyNode(state) {
+  if (!state.routePlan?.runDependency) return { issues: [] };
+
+  return {
+    issues: dependencyAgent.review(state.context),
+  };
+}
 async function ruleNode(state) {
   return {
     issues: ruleBasedAgent.review(state.context),
@@ -80,7 +110,7 @@ async function ruleNode(state) {
 }
 
 async function securityNode(state) {
-  if (state.rulesOnly) return { issues: [] };
+  if (state.rulesOnly || !state.routePlan?.runSecurity) return { issues: [] };
 
   return {
     issues: await safeIssueCall(
@@ -92,7 +122,7 @@ async function securityNode(state) {
 }
 
 async function performanceNode(state) {
-  if (state.rulesOnly) return { issues: [] };
+  if (state.rulesOnly || !state.routePlan?.runPerformance) return { issues: [] };
 
   return {
     issues: await safeIssueCall(
@@ -104,19 +134,17 @@ async function performanceNode(state) {
 }
 
 async function logicNode(state) {
-  if (state.rulesOnly) return { issues: [] };
+  if (state.rulesOnly || !state.routePlan?.runLogic) return { issues: [] };
 
   return {
-    issues: await safeIssueCall(
-      "Logic Agent",
-      logicAgent.review,
-      state.context
-    ),
+    issues: await safeIssueCall("Logic Agent", logicAgent.review, state.context),
   };
 }
 
 async function apiContractNode(state) {
-  if (state.rulesOnly) return { issues: [] };
+  if (state.rulesOnly || !state.routePlan?.runApiContract) {
+    return { issues: [] };
+  }
 
   return {
     issues: await safeIssueCall(
@@ -128,19 +156,22 @@ async function apiContractNode(state) {
 }
 
 async function testNode(state) {
-  if (state.rulesOnly || state.skipTests) return { tests: [] };
+  if (state.rulesOnly || state.skipTests || !state.routePlan?.runTests) {
+    return { tests: [] };
+  }
 
   return {
-    tests: await safeTestCall(
-      "Test Agent",
-      testAgent.generate,
-      state.context
-    ),
+    tests: await safeTestCall("Test Agent", testAgent.generate, state.context),
   };
 }
 
 async function criticNode(state) {
-  if (state.rulesOnly || state.skipCritic || state.issues.length === 0) {
+  if (
+    state.rulesOnly ||
+    state.skipCritic ||
+    !state.routePlan?.runCritic ||
+    state.issues.length === 0
+  ) {
     return {
       criticReview: { issueOpinions: [] },
     };
@@ -165,6 +196,14 @@ async function summaryNode(state) {
   );
 
   report.summary.latencyMs = Date.now() - state.startedAt;
+  report.summary.routePlan = state.routePlan;
+  report.summary.largePrMode = state.context.largePrMode;
+  report.summary.reviewMode = state.context.reviewMode;
+  report.summary.originalChangedLines = state.context.originalChangedLines;
+  report.summary.reviewedChangedLines = state.context.changes.length;
+
+  report.summary.coverage =
+  `${state.context.changes.length}/${state.context.originalChangedLines}`;
 
   return { report };
 }
@@ -180,18 +219,20 @@ function buildReviewGraph() {
     .addNode("testAgent", testNode)
     .addNode("criticAgent", criticNode)
     .addNode("summaryAgent", summaryNode)
+    .addNode("router", routerNode)
+    .addNode("dependencyAgent", dependencyNode)
 
     .addEdge(START, "parseDiff")
+    .addEdge("parseDiff", "router")
 
-    // Parallel nodes
-    .addEdge("parseDiff", "ruleAgent")
-    .addEdge("parseDiff", "securityAgent")
-    .addEdge("parseDiff", "performanceAgent")
-    .addEdge("parseDiff", "logicAgent")
-    .addEdge("parseDiff", "apiContractAgent")
-    .addEdge("parseDiff", "testAgent")
+    .addEdge("router", "ruleAgent")
+    .addEdge("router", "securityAgent")
+    .addEdge("router", "performanceAgent")
+    .addEdge("router", "logicAgent")
+    .addEdge("router", "apiContractAgent")
+    .addEdge("router", "dependencyAgent")
+    .addEdge("router", "testAgent")
 
-    // Wait for all parallel nodes, then run critic
     .addEdge(
       [
         "ruleAgent",
@@ -199,6 +240,7 @@ function buildReviewGraph() {
         "performanceAgent",
         "logicAgent",
         "apiContractAgent",
+        "dependencyAgent",
         "testAgent",
       ],
       "criticAgent"

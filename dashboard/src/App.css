@@ -213,7 +213,7 @@ select {
 .hero-section {
   text-align: center;
   max-width: 1120px;
-  margin: 0 auto 38px;
+  margin: 0 auto 60px;
 }
 
 .hero-tag {
@@ -230,10 +230,10 @@ select {
 }
 
 .hero-title {
-  margin: 18px 0 14px;
+  margin: 18px 0 26px;
   font-family: "Space Grotesk", sans-serif;
-  font-size: clamp(50px, 5.6vw, 88px);
-  line-height: 1.04;
+  font-size: clamp(46px, 6vw, 82px);
+  line-height: 1.02;
   letter-spacing: -0.055em;
   font-weight: 700;
 }
@@ -246,67 +246,75 @@ select {
   margin: 0 auto;
   max-width: 900px;
   color: var(--muted);
-  font-size: 19px;
-  line-height: 1.7;
+  font-size: 18px;
+  line-height: 1.75;
 }
 
 .review-panel-wrapper {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-bottom: 28px;
+  margin-bottom: 34px;
 }
 .review-panel {
   width: 100%;
   max-width: 1280px;
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(23, 28, 44, 0.94), rgba(17, 21, 34, 0.92)),
+    var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 34px;
   box-shadow: var(--shadow);
-  padding: 42px 46px;
+  padding: 46px 48px 44px;
 }
 .review-panel-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 22px;
+  margin-bottom: 28px;
 }
 
 .review-panel-top h2 {
   margin: 4px 0 0;
-  font-size: 34px;
-  letter-spacing: -0.04em;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(30px, 2.4vw, 40px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  font-weight: 700;
 }
 .section-kicker {
   margin: 0;
-  color: #b9c3d9;
+  color: #c6d2eb;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   font-size: 12px;
-  font-weight: 700;
+  line-height: 1.2;
+  font-weight: 800;
 }
 
 .mode-chip {
-  padding: 10px 14px;
+  padding: 11px 16px;
   border-radius: 999px;
   background: rgba(139, 92, 246, 0.12);
   color: #ddd6fe;
   border: 1px solid rgba(139, 92, 246, 0.24);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 800;
 }
 
 .review-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
 }
 
 .field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  column-gap: 34px;
+  row-gap: 20px;
 }
 
 .field-grid.two-col {
@@ -316,25 +324,29 @@ select {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .field span {
-  color: #d7deee;
-  font-size: 16px;
-  font-weight: 700;
+  color: #e4eaf7;
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 800;
 }
 
 input,
 select {
   width: 100%;
-  padding: 16px 17px;
-  border-radius: 18px;
+  min-height: 62px;
+  padding: 17px 18px;
+  border-radius: 17px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(8, 11, 19, 0.92);
   color: var(--white);
   outline: none;
   font-size: 16px;
+  line-height: 1.35;
+  font-weight: 600;
 }
 input:focus,
 select:focus {
@@ -342,45 +354,93 @@ select:focus {
   box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.12);
 }
 
+.repo-path-drop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.repo-path-drop input:not(.repo-directory-input) {
+  flex: 1;
+  min-width: 0;
+}
+
+.repo-picker-btn {
+  min-height: 62px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(139, 92, 246, 0.24);
+  border-radius: 17px;
+  padding: 0 18px;
+  background: rgba(139, 92, 246, 0.12);
+  color: #ddd6fe;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.repo-picker-btn:hover {
+  background: rgba(139, 92, 246, 0.18);
+}
+
+.repo-directory-input {
+  display: none;
+}
+
 .mode-description {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  border-radius: 18px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
+  border-radius: 17px;
+  padding: 20px 22px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.09);
 }
 
 .mode-description-label {
-  margin-bottom: 8px;
-  color: #cbd5e1;
-  font-size: 13px;
-  font-weight: 700;
+  margin-bottom: 12px;
+  color: #e4eaf7;
+  font-size: 15px;
+  line-height: 1.25;
+  font-weight: 800;
 }
 
-.mode-description p {
+.mode-description-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mode-description-copy p {
   margin: 0;
-  color: var(--muted);
-  line-height: 1.6;
-  font-size: 14px;
+  color: #b8c4db;
+  line-height: 1.5;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.mode-description-copy strong {
+  color: #eef2ff;
+  font-weight: 850;
 }
 
 .form-actions {
   display: flex;
   justify-content: center;
-  margin-top: 6px;
+  margin-top: 2px;
 }
 
 .primary-btn {
   min-width: 260px;
   border: none;
   border-radius: 20px;
-  padding: 17px 30px;
+  padding: 18px 32px;
   background: #ffffff;
   color: #05070d;
-  font-weight: 950;
-  font-size: 17px;
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1.15;
   cursor: pointer;
   box-shadow: 0 18px 40px rgba(255, 255, 255, 0.12);
 }
@@ -392,20 +452,23 @@ select:focus {
 
 .error-box {
   margin-top: 18px;
-  padding: 14px 16px;
+  padding: 15px 17px;
   border-radius: 16px;
   color: #fecaca;
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.2);
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 650;
 }
 
 .progress-section {
-  width: min(960px, 100%);
+  width: min(1120px, 100%);
   margin: 0 auto 26px;
   background: rgba(15, 18, 30, 0.82);
   border: 1px solid var(--border);
   border-radius: 22px;
-  padding: 18px 20px;
+  padding: 20px 22px;
 }
 
 .progress-header {
@@ -413,8 +476,9 @@ select:focus {
   justify-content: space-between;
   margin-bottom: 10px;
   color: #e5e7eb;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.3;
 }
 
 .progress-track {
@@ -434,8 +498,10 @@ select:focus {
 
 .progress-label {
   margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 14px;
+  color: #aeb9cf;
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 500;
 }
 
 .stats-grid {
@@ -446,36 +512,39 @@ select:focus {
 }
 
 .stat-card {
-  min-height: 94px;
+  min-height: 108px;
   border-radius: 18px;
   background: rgba(16, 20, 32, 0.9);
   border: 1px solid var(--border);
-  padding: 14px 16px;
+  padding: 18px 18px;
   box-shadow: var(--shadow);
 }
 
 .stat-card span {
   display: block;
-  color: var(--muted);
+  color: #aab5ca;
   font-size: 12px;
+  line-height: 1.25;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-weight: 800;
 }
 
 .stat-card strong {
   display: block;
-  margin-top: 12px;
-  font-size: 30px;
+  margin-top: 14px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(28px, 2.4vw, 38px);
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.035em;
+  font-weight: 800;
 }
 
 .tabs-section {
   background: rgba(14, 18, 29, 0.88);
   border: 1px solid var(--border);
   border-radius: 26px;
-  padding: 18px;
+  padding: 22px;
   box-shadow: var(--shadow);
 }
 
@@ -491,9 +560,11 @@ select:focus {
   background: rgba(255, 255, 255, 0.03);
   color: #d1d9ea;
   border-radius: 999px;
-  padding: 11px 16px;
+  padding: 12px 17px;
   cursor: pointer;
-  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.15;
+  font-weight: 800;
 }
 
 .tab.active {
@@ -508,22 +579,23 @@ select:focus {
 .card-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 22px;
 }
 
 .issue-card {
   background: rgba(8, 11, 19, 0.92);
   border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 18px;
+  border-radius: 24px;
+  padding: 34px 34px 30px;
+  min-height: 300px;
 }
 
 .issue-card-top {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 14px;
   align-items: flex-start;
-  margin-bottom: 14px;
+  margin-bottom: 24px;
 }
 
 .issue-badges {
@@ -538,7 +610,8 @@ select:focus {
   justify-content: center;
   padding: 7px 11px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 11.5px;
+  line-height: 1.1;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -580,51 +653,57 @@ select:focus {
   background: rgba(255, 255, 255, 0.04);
   color: #cbd5e1;
   border: 1px solid var(--border);
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 1.1;
+  font-weight: 750;
   white-space: nowrap;
 }
 
 .issue-line {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   align-items: flex-start;
 }
 
 .suggestion-line {
-  margin-top: 16px;
+  margin-top: 28px;
 }
 
 .issue-icon {
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   display: grid;
   place-items: center;
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.05);
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .issue-label {
   margin: 0 0 4px;
-  color: #9fb0c9;
+  color: #a9b8d0;
   font-size: 12px;
+  line-height: 1.25;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .issue-line h3 {
   margin: 0;
-  font-size: 18px;
-  letter-spacing: -0.02em;
-  line-height: 1.4;
+  font-size: 21px;
+  letter-spacing: -0.025em;
+  line-height: 1.55;
+  font-weight: 750;
 }
 
 .issue-suggestion {
   margin: 0;
-  color: #cbd5e1;
-  line-height: 1.65;
+  color: #d4dbea;
+  font-size: 16px;
+  line-height: 1.8;
+  font-weight: 500;
 }
 
 .issue-footer {
@@ -632,17 +711,51 @@ select:focus {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 18px;
-  padding-top: 14px;
+  margin-top: 32px;
+  padding-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--muted);
-  font-size: 13px;
+  color: #9faac0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  font-weight: 600;
 }
 
 .empty-state {
-  padding: 40px 12px;
+  padding: 46px 12px;
   text-align: center;
-  color: var(--muted);
+  color: #aeb9cf;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.report-actions {
+  display: flex;
+  justify-content: center;
+  margin: 26px auto 0;
+}
+
+.download-report-btn {
+  min-width: 260px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 17px 28px;
+  background: #ffffff;
+  color: #05070d;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1.15;
+  font-weight: 900;
+  box-shadow: 0 18px 44px rgba(255, 255, 255, 0.12);
+}
+
+.download-report-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 52px rgba(255, 255, 255, 0.16);
+}
+
+.print-report {
+  display: none;
 }
 
 @media (max-width: 1000px) {
@@ -690,5 +803,182 @@ select:focus {
 
   .hero-title {
     font-size: 34px;
+  }
+
+  .issue-card {
+    min-height: auto;
+    padding: 22px;
+  }
+}
+
+@media print {
+  @page {
+    margin: 18mm;
+  }
+
+  html,
+  body {
+    width: auto;
+    overflow: visible;
+    background: #ffffff !important;
+    color: #111827 !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .print-report,
+  .print-report * {
+    visibility: visible;
+  }
+
+  .print-report {
+    display: block;
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 0;
+    background: #ffffff;
+    color: #111827;
+    font-family: "Inter", Arial, sans-serif;
+    text-align: left;
+  }
+
+  .print-report-header {
+    padding-bottom: 18px;
+    border-bottom: 2px solid #111827;
+    margin-bottom: 18px;
+  }
+
+  .print-kicker {
+    margin: 0 0 6px;
+    color: #4f46e5;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .print-report h1 {
+    margin: 0 0 8px;
+    color: #111827;
+    font-size: 30px;
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .print-report-header p:last-child {
+    margin: 0;
+    color: #4b5563;
+    font-size: 12px;
+  }
+
+  .print-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+
+  .print-metric {
+    break-inside: avoid;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 12px;
+    background: #f9fafb;
+  }
+
+  .print-metric span {
+    display: block;
+    color: #4b5563;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .print-metric strong {
+    display: block;
+    margin-top: 7px;
+    color: #111827;
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 800;
+  }
+
+  .print-section {
+    margin-top: 24px;
+  }
+
+  .print-section h2 {
+    margin: 0 0 12px;
+    color: #111827;
+    font-size: 19px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .print-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background: #ffffff;
+  }
+
+  .print-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .print-item-meta span {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    padding: 4px 8px;
+    color: #374151;
+    background: #f9fafb;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .print-item h3 {
+    margin: 0 0 8px;
+    color: #111827;
+    font-size: 15px;
+    line-height: 1.45;
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+
+  .print-item p {
+    margin: 0;
+    color: #374151;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .print-item footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+    padding-top: 9px;
+    border-top: 1px solid #e5e7eb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .print-empty {
+    color: #4b5563;
+    font-size: 13px;
   }
 }

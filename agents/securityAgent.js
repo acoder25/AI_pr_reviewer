@@ -1,4 +1,4 @@
-const { model } = require("../llm/model");
+const { model } = require("model");
 
 function safeJsonParse(text) {
   try {

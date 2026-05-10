@@ -410,14 +410,6 @@ This makes the review process adaptive and structured.
 
 ---
 
-## Resume-ready description
-
-> Built CodeSentinel AI, a LangGraph-powered hybrid multi-agent pull request reviewer for MERN applications using rule-based checks, Gemini agents, Groq critic validation, API-contract analysis, confidence scoring, and benchmark evaluation.
-
-> Evaluated the reviewer on 9 benchmark PRs with injected defects, achieving 87.5% detection accuracy, 85.7% severity accuracy, and 100% clean-PR pass rate.
-
----
-
 ## License
 
 MIT
